@@ -137,7 +137,7 @@ func (ap *ArgumentParser) extractVal(stringval string, value *reflect.Value) err
 }
 
 func (ap *ArgumentParser) ParseOne() error {
-	arg := strings.ToLower(ap.Args[ap.Idx])
+	arg := ap.Args[ap.Idx]
 
 	if ap.Stopped || arg[0] != '-' {
 		ap.OutArgs = append(ap.OutArgs, arg)
@@ -147,6 +147,8 @@ func (ap *ArgumentParser) ParseOne() error {
 		ap.Idx++
 		return nil
 	}
+
+	arg = strings.ToLower(arg)
 
 	for len(arg) > 0 && arg[0] == '-' {
 		arg = arg[1:]
@@ -198,6 +200,6 @@ func ParseArguments(arguments []string, params interface{}, stop bool) ([]string
 	return aparser.OutArgs, nil
 }
 
-func Parse(v interface{}) ([]string, error) {
-	return ParseArguments(os.Args[1:], v, true)
+func Parse(params interface{}) ([]string, error) {
+	return ParseArguments(os.Args[1:], params, true)
 }
