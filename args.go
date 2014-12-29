@@ -69,6 +69,7 @@ func (ap *ArgumentParser) extractVal(stringval string, value *reflect.Value) err
 
 func (ap *ArgumentParser) ParseOne() error {
 	arg := ap.Args[ap.Idx]
+	var stringval string
 
 	if ap.Stopped || arg[0] != '-' {
 		ap.OutArgs = append(ap.OutArgs, arg)
@@ -79,18 +80,32 @@ func (ap *ArgumentParser) ParseOne() error {
 		return nil
 	}
 
-	arg = strings.ToLower(arg)
-
 	for len(arg) > 0 && arg[0] == '-' {
 		arg = arg[1:]
 	}
+
+	idx := strings.Index(arg, "=")
+	if idx >= 0 {
+		exploded := strings.Split(arg, "=")
+		if exploded[1] == "" {
+			return fmt.Errorf("klash: no value provided to %s", exploded[0])
+		}
+		arg, stringval = exploded[0], exploded[1]
+	}
+
+	arg = strings.ToLower(arg)
 
 	if param, ok := ap.Parser.Params[arg]; ok {
 		if param.Value.Kind() == reflect.Bool {
 			param.Value.Set(reflect.ValueOf(true))
 		} else {
-			ap.Idx++
-			stringval := ap.Args[ap.Idx]
+			if stringval == "" {
+				ap.Idx++
+				if ap.Idx >= len(ap.Args) {
+					return fmt.Errorf("klash: no value provided to %s", arg)
+				}
+				stringval = ap.Args[ap.Idx]
+			}
 
 			if param.Value.Kind() == reflect.Slice {
 				value := reflect.New(param.Value.Type().Elem()).Elem()
