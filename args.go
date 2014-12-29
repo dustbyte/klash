@@ -67,6 +67,10 @@ func (ap *ArgumentParser) extractVal(stringval string, value *reflect.Value) err
 	return nil
 }
 
+func (ap *ArgumentParser) setBool(param *Parameter) {
+	param.Value.Set(reflect.ValueOf(true))
+}
+
 func (ap *ArgumentParser) ParseOne() error {
 	arg := ap.Args[ap.Idx]
 	var stringval string
@@ -97,7 +101,7 @@ func (ap *ArgumentParser) ParseOne() error {
 
 	if param, ok := ap.Parser.Params[arg]; ok {
 		if param.Value.Kind() == reflect.Bool {
-			param.Value.Set(reflect.ValueOf(true))
+			ap.setBool(param)
 		} else {
 			if stringval == "" {
 				ap.Idx++
@@ -118,7 +122,14 @@ func (ap *ArgumentParser) ParseOne() error {
 			}
 		}
 	} else {
-		return fmt.Errorf("klash: Invalid flag: %s", arg)
+		for _, rune := range arg {
+			param, ok := ap.Parser.Params[string(rune)]
+			if ok && param.Value.Kind() == reflect.Bool {
+				ap.setBool(param)
+			} else {
+				return fmt.Errorf("klash: Invalid flag: %s", arg)
+			}
+		}
 	}
 
 	ap.Idx++
