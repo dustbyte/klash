@@ -7,6 +7,10 @@ import (
 	"strings"
 )
 
+type Convertible interface {
+	FromString(stringval string) error
+}
+
 type ArgumentParser struct {
 	Parser  *ParamParser
 	Args    []string
@@ -31,7 +35,37 @@ func (ap *ArgumentParser) Terminated() bool {
 	return ap.Idx >= len(ap.Args)
 }
 
-func (ap *ArgumentParser) extractVal(stringval string, value *reflect.Value) error {
+func (ap *ArgumentParser) checkConvertible(stringval string,
+	value *reflect.Value) error {
+
+	if !value.CanAddr() {
+		return fmt.Errorf("klash: %s is not addressable", value.Type())
+	}
+	ptr := value.Addr()
+
+	interfaceType := reflect.TypeOf((*Convertible)(nil)).Elem()
+
+	if !ptr.Type().Implements(interfaceType) {
+		return fmt.Errorf("klash: Invalid type %s", value.Type())
+	}
+
+	method := ptr.MethodByName("FromString")
+	if !method.IsValid() {
+		return fmt.Errorf("klash: Method not valid for %s", value.Type())
+	}
+
+	ierr := method.Call([]reflect.Value{reflect.ValueOf(stringval)})[0].Interface()
+
+	// Cannot assert nil to be of type error
+	if ierr == nil {
+		return nil
+	}
+	return (ierr).(error)
+}
+
+func (ap *ArgumentParser) extractVal(stringval string,
+	value *reflect.Value) error {
+
 	switch value.Kind() {
 	case reflect.String:
 		value.Set(reflect.ValueOf(stringval))
@@ -60,9 +94,7 @@ func (ap *ArgumentParser) extractVal(stringval string, value *reflect.Value) err
 		}
 		value.Set(reflect.ValueOf(float64(val)))
 	default:
-		return fmt.Errorf("klash: Invalid type %s",
-			value.Kind(),
-		)
+		return ap.checkConvertible(stringval, value)
 	}
 	return nil
 }

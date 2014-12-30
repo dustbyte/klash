@@ -1,20 +1,9 @@
 package klash
 
 import (
-	"fmt"
 	"reflect"
 	"strings"
 )
-
-var allowedTypes map[reflect.Kind]bool = map[reflect.Kind]bool{
-	reflect.Bool:    true,
-	reflect.Int:     true,
-	reflect.Uint:    true,
-	reflect.Float32: true,
-	reflect.Float64: true,
-	reflect.String:  true,
-	reflect.Slice:   true,
-}
 
 type Parameter struct {
 	Names []string
@@ -45,22 +34,8 @@ func (p *ParamParser) Parse(pvalue *reflect.Value) error {
 		field := vtype.Field(idx)
 
 		value := pvalue.Elem().Field(idx)
-		if _, ok := allowedTypes[value.Kind()]; !ok {
-			return fmt.Errorf("klash: Invalid type for parameter %s: %s",
-				field.Name,
-				value.Kind(),
-			)
-		}
 
 		if value.Kind() == reflect.Slice {
-			sliceType := value.Type().Elem()
-			_, ok := allowedTypes[sliceType.Kind()]
-			if !ok || sliceType.Kind() == reflect.Slice {
-				return fmt.Errorf("klash: Invalid slice type for parameter %s: %s",
-					field.Name,
-					sliceType.Kind(),
-				)
-			}
 			value.Set(reflect.MakeSlice(value.Type(), 0, 0))
 		}
 
