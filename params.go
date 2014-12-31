@@ -19,15 +19,13 @@ func NewParameter(name string, value reflect.Value) *Parameter {
 	return &parameter
 }
 
-type ParamParser struct {
-	Params map[string]*Parameter
+type Params map[string]*Parameter
+
+func NewParams() Params {
+	return make(map[string]*Parameter)
 }
 
-func NewParamParser() *ParamParser {
-	return &ParamParser{make(map[string]*Parameter)}
-}
-
-func (p *ParamParser) Parse(pvalue *reflect.Value) error {
+func (p Params) Parse(pvalue *reflect.Value) {
 	vtype := pvalue.Type().Elem()
 
 	for idx := 0; idx < vtype.NumField(); idx++ {
@@ -42,8 +40,7 @@ func (p *ParamParser) Parse(pvalue *reflect.Value) error {
 		parameter := NewParameter(field.Name, value)
 
 		for _, name := range parameter.Names {
-			p.Params[strings.ToLower(name)] = parameter
+			p[strings.ToLower(name)] = parameter
 		}
 	}
-	return nil
 }

@@ -12,7 +12,7 @@ type Convertible interface {
 }
 
 type ArgumentParser struct {
-	Parser  *ParamParser
+	Params  Params
 	Args    []string
 	OutArgs []string
 	Idx     int
@@ -20,9 +20,9 @@ type ArgumentParser struct {
 	Stopped bool
 }
 
-func NewArgumentParser(parser *ParamParser, args []string, stop bool) *ArgumentParser {
+func NewArgumentParser(params Params, args []string, stop bool) *ArgumentParser {
 	return &ArgumentParser{
-		parser,
+		params,
 		args,
 		make([]string, 0, len(args)),
 		0,
@@ -121,9 +121,30 @@ func (ap *ArgumentParser) setBool(param *Parameter) {
 	param.Value.Set(reflect.ValueOf(true))
 }
 
+func (ap *ArgumentParser) stripDashes(arg string) string {
+	for len(arg) > 0 && arg[0] == '-' {
+		arg = arg[1:]
+	}
+	return arg
+}
+
+func (ap *ArgumentParser) explodeArg(arg string) (string, string, error) {
+	idx := strings.Index(arg, "=")
+
+	if idx >= 0 {
+		exploded := strings.Split(arg, "=")
+		if exploded[1] == "" {
+			return "", "", fmt.Errorf("klash: no value provided to %s", exploded[0])
+		}
+		return exploded[0], exploded[1], nil
+	}
+	return arg, "", nil
+}
+
 func (ap *ArgumentParser) ParseOne() error {
 	arg := ap.Args[ap.Idx]
 	var stringval string
+	var err error
 
 	if ap.Stopped || arg[0] != '-' {
 		ap.OutArgs = append(ap.OutArgs, arg)
@@ -134,22 +155,15 @@ func (ap *ArgumentParser) ParseOne() error {
 		return nil
 	}
 
-	for len(arg) > 0 && arg[0] == '-' {
-		arg = arg[1:]
-	}
-
-	idx := strings.Index(arg, "=")
-	if idx >= 0 {
-		exploded := strings.Split(arg, "=")
-		if exploded[1] == "" {
-			return fmt.Errorf("klash: no value provided to %s", exploded[0])
-		}
-		arg, stringval = exploded[0], exploded[1]
+	arg = ap.stripDashes(arg)
+	arg, stringval, err = ap.explodeArg(arg)
+	if err != nil {
+		return err
 	}
 
 	arg = strings.ToLower(arg)
 
-	if param, ok := ap.Parser.Params[arg]; ok {
+	if param, ok := ap.Params[arg]; ok {
 		if param.Value.Kind() == reflect.Bool {
 			ap.setBool(param)
 		} else {
@@ -163,17 +177,17 @@ func (ap *ArgumentParser) ParseOne() error {
 
 			if param.Value.Kind() == reflect.Slice {
 				value := reflect.New(param.Value.Type().Elem()).Elem()
-				if err := ap.extractVal(stringval, &value); err != nil {
+				if err = ap.extractVal(stringval, &value); err != nil {
 					return err
 				}
 				param.Value.Set(reflect.Append(param.Value, value))
-			} else if err := ap.extractVal(stringval, &param.Value); err != nil {
+			} else if err = ap.extractVal(stringval, &param.Value); err != nil {
 				return err
 			}
 		}
 	} else {
 		for _, rune := range arg {
-			param, ok := ap.Parser.Params[string(rune)]
+			param, ok := ap.Params[string(rune)]
 			if ok && param.Value.Kind() == reflect.Bool {
 				ap.setBool(param)
 			} else {

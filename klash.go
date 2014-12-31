@@ -6,27 +6,27 @@ import (
 	"reflect"
 )
 
-func ParseArguments(arguments []string, params interface{}, stop bool) ([]string, error) {
-	pvalue := reflect.ValueOf(params)
-	if pvalue.Kind() != reflect.Ptr {
-		return nil, errors.New("klash: Pointer type expected")
+func ParseArguments(arguments []string, parameters interface{}, stop bool) ([]string, error) {
+	pvalue := reflect.ValueOf(parameters)
+	if pvalue.Kind() != reflect.Ptr || pvalue.Elem().Kind() != reflect.Struct {
+		return nil, errors.New("klash: Pointer to struct expected")
 	}
 
-	parser := NewParamParser()
-	if err := parser.Parse(&pvalue); err != nil {
+	params := NewParams()
+	if err := params.Parse(&pvalue); err != nil {
 		return nil, err
 	}
-	aparser := NewArgumentParser(parser, arguments, stop)
+	parser := NewArgumentParser(params, arguments, stop)
 
-	for !aparser.Terminated() {
-		if err := aparser.ParseOne(); err != nil {
+	for !parser.Terminated() {
+		if err := parser.ParseOne(); err != nil {
 			return nil, err
 		}
 	}
 
-	return aparser.OutArgs, nil
+	return parser.OutArgs, nil
 }
 
-func Parse(params interface{}) ([]string, error) {
-	return ParseArguments(os.Args[1:], params, true)
+func Parse(parameters interface{}) ([]string, error) {
+	return ParseArguments(os.Args[1:], parameters, true)
 }
