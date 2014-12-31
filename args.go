@@ -36,65 +36,83 @@ func (ap *ArgumentParser) Terminated() bool {
 }
 
 func (ap *ArgumentParser) checkConvertible(stringval string,
-	value *reflect.Value) error {
+	value *reflect.Value) (error, bool) {
 
-	if !value.CanAddr() {
-		return fmt.Errorf("klash: %s is not addressable", value.Type())
+	var ptrType reflect.Type
+	var ptr reflect.Value
+
+	if value.Kind() == reflect.Ptr {
+		ptrType = value.Type()
+		ptr = *value
+	} else {
+		ptrType = reflect.PtrTo(value.Type())
+
+		if !value.CanAddr() {
+			return fmt.Errorf("klash: %s is not addressable", value.Type()), false
+		}
+		ptr = value.Addr()
 	}
-	ptr := value.Addr()
 
 	interfaceType := reflect.TypeOf((*Convertible)(nil)).Elem()
 
-	if !ptr.Type().Implements(interfaceType) {
-		return fmt.Errorf("klash: Invalid type %s", value.Type())
+	if !ptrType.Implements(interfaceType) {
+		return nil, false
 	}
 
 	method := ptr.MethodByName("FromString")
 	if !method.IsValid() {
-		return fmt.Errorf("klash: Method not valid for %s", value.Type())
+		return fmt.Errorf("klash: Method not valid for %s", value.Type()), false
 	}
 
 	ierr := method.Call([]reflect.Value{reflect.ValueOf(stringval)})[0].Interface()
 
 	// Cannot assert nil to be of type error
 	if ierr == nil {
-		return nil
+		return nil, true
 	}
-	return (ierr).(error)
+	return (ierr).(error), false
 }
 
 func (ap *ArgumentParser) extractVal(stringval string,
 	value *reflect.Value) error {
 
-	switch value.Kind() {
-	case reflect.String:
-		value.Set(reflect.ValueOf(stringval))
-	case reflect.Int:
-		val, err := strconv.ParseInt(stringval, 0, 0)
-		if err != nil {
-			return err
+	err, converted := ap.checkConvertible(stringval, value)
+
+	if err != nil {
+		return err
+	}
+
+	if !converted {
+		switch value.Kind() {
+		case reflect.String:
+			value.Set(reflect.ValueOf(stringval))
+		case reflect.Int:
+			val, err := strconv.ParseInt(stringval, 0, 0)
+			if err != nil {
+				return err
+			}
+			value.Set(reflect.ValueOf(int(val)))
+		case reflect.Uint:
+			val, err := strconv.ParseUint(stringval, 0, 0)
+			if err != nil {
+				return err
+			}
+			value.Set(reflect.ValueOf(uint(val)))
+		case reflect.Float32:
+			val, err := strconv.ParseFloat(stringval, 32)
+			if err != nil {
+				return err
+			}
+			value.Set(reflect.ValueOf(float32(val)))
+		case reflect.Float64:
+			val, err := strconv.ParseFloat(stringval, 64)
+			if err != nil {
+				return err
+			}
+			value.Set(reflect.ValueOf(float64(val)))
+		default:
+			return fmt.Errorf("klash: invalid type %s", value.Type())
 		}
-		value.Set(reflect.ValueOf(int(val)))
-	case reflect.Uint:
-		val, err := strconv.ParseUint(stringval, 0, 0)
-		if err != nil {
-			return err
-		}
-		value.Set(reflect.ValueOf(uint(val)))
-	case reflect.Float32:
-		val, err := strconv.ParseFloat(stringval, 32)
-		if err != nil {
-			return err
-		}
-		value.Set(reflect.ValueOf(float32(val)))
-	case reflect.Float64:
-		val, err := strconv.ParseFloat(stringval, 64)
-		if err != nil {
-			return err
-		}
-		value.Set(reflect.ValueOf(float64(val)))
-	default:
-		return ap.checkConvertible(stringval, value)
 	}
 	return nil
 }
