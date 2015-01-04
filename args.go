@@ -12,6 +12,7 @@ type Convertible interface {
 }
 
 type ArgumentParser struct {
+	Name    string
 	Params  Params
 	Args    []string
 	OutArgs []string
@@ -20,8 +21,9 @@ type ArgumentParser struct {
 	Stopped bool
 }
 
-func NewArgumentParser(params Params, args []string, stop bool) *ArgumentParser {
+func NewArgumentParser(name string, params Params, args []string, stop bool) *ArgumentParser {
 	return &ArgumentParser{
+		name,
 		params,
 		args,
 		make([]string, 0, len(args)),
@@ -48,7 +50,7 @@ func (ap *ArgumentParser) checkConvertible(stringval string,
 		ptrType = reflect.PtrTo(value.Type())
 
 		if !value.CanAddr() {
-			return fmt.Errorf("klash: %s is not addressable", value.Type()), false
+			return fmt.Errorf("%s: error: %s is not addressable", ap.Name, value.Type()), false
 		}
 		ptr = value.Addr()
 	}
@@ -61,7 +63,8 @@ func (ap *ArgumentParser) checkConvertible(stringval string,
 
 	method := ptr.MethodByName("FromString")
 	if !method.IsValid() {
-		return fmt.Errorf("klash: Method not valid for %s", value.Type()), false
+		return fmt.Errorf("%s: error: conversion method not valid: %s",
+			ap.Name, value.Type()), false
 	}
 
 	ierr := method.Call([]reflect.Value{reflect.ValueOf(stringval)})[0].Interface()
@@ -111,7 +114,7 @@ func (ap *ArgumentParser) extractVal(stringval string,
 			}
 			value.Set(reflect.ValueOf(float64(val)))
 		default:
-			return fmt.Errorf("klash: invalid type %s", value.Type())
+			return fmt.Errorf("%s: error: cannot handle type %s", ap.Name, value.Type())
 		}
 	}
 	return nil
@@ -134,7 +137,7 @@ func (ap *ArgumentParser) explodeArg(arg string) (string, string, error) {
 	if idx >= 0 {
 		exploded := strings.Split(arg, "=")
 		if exploded[1] == "" {
-			return "", "", fmt.Errorf("klash: no value provided to %s", exploded[0])
+			return "", "", fmt.Errorf("%s: error: no value provided to %s", ap.Name, exploded[0])
 		}
 		return exploded[0], exploded[1], nil
 	}
@@ -170,7 +173,7 @@ func (ap *ArgumentParser) ParseOne() error {
 			if stringval == "" {
 				ap.Idx++
 				if ap.Idx >= len(ap.Args) {
-					return fmt.Errorf("klash: no value provided to %s", arg)
+					return fmt.Errorf("%s: error: no value provided for %s", ap.Name, arg)
 				}
 				stringval = ap.Args[ap.Idx]
 			}
@@ -191,7 +194,7 @@ func (ap *ArgumentParser) ParseOne() error {
 			if ok && param.Value.Kind() == reflect.Bool {
 				ap.setBool(param)
 			} else {
-				return fmt.Errorf("klash: Invalid flag: %s", arg)
+				return fmt.Errorf("%s: error: unrecognized arguments: %s", ap.Name, arg)
 			}
 		}
 	}
