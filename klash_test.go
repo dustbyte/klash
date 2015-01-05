@@ -1,8 +1,10 @@
-package klash
+package klash_test
 
 import (
 	"testing"
 	"time"
+
+	"github.com/mota/klash"
 )
 
 // For convertibility purpose
@@ -27,7 +29,7 @@ func (d *Date) FromString(stringval string) error {
 func TestPositional(t *testing.T) {
 	var parameters struct{}
 	osargs := []string{"dummy", "test"}
-	args, err := ParseArguments("test", osargs, &parameters, true)
+	args, err := klash.ParseArguments("test", osargs, &parameters, true)
 
 	if err != nil {
 		t.Error(err)
@@ -45,7 +47,7 @@ func TestSimple(t *testing.T) {
 	}
 	parameters := TestStruct{}
 	osargs := []string{"--dummy", "derp"}
-	_, err := ParseArguments("test", osargs, &parameters, true)
+	_, err := klash.ParseArguments("test", osargs, &parameters, true)
 
 	if err != nil {
 		t.Error(err)
@@ -64,7 +66,7 @@ func TestStop(t *testing.T) {
 	}
 	parameters := TestStruct{}
 	osargs := []string{"--name", "Jack", "play", "--nickname", "derp"}
-	_, err := ParseArguments("test", osargs, &parameters, true)
+	_, err := klash.ParseArguments("test", osargs, &parameters, true)
 
 	if err != nil {
 		t.Error(err)
@@ -83,7 +85,7 @@ func TestNoStop(t *testing.T) {
 	}
 	parameters := TestStruct{}
 	osargs := []string{"--name", "Jack", "play", "--nickname", "derp"}
-	_, err := ParseArguments("test", osargs, &parameters, false)
+	_, err := klash.ParseArguments("test", osargs, &parameters, false)
 
 	if err != nil {
 		t.Error(err)
@@ -101,7 +103,7 @@ func TestNoValue(t *testing.T) {
 	}
 	parameters := TestStruct{}
 	osargs := []string{"--dummy"}
-	_, err := ParseArguments("test", osargs, &parameters, true)
+	_, err := klash.ParseArguments("test", osargs, &parameters, true)
 
 	if err == nil {
 		t.Error("Should produce an error")
@@ -114,7 +116,7 @@ func TestEqual(t *testing.T) {
 	}
 	parameters := TestStruct{}
 	osargs := []string{"--dummy=derp"}
-	_, err := ParseArguments("test", osargs, &parameters, true)
+	_, err := klash.ParseArguments("test", osargs, &parameters, true)
 
 	if err != nil {
 		t.Error(err)
@@ -132,7 +134,7 @@ func TestEqualNoValue(t *testing.T) {
 	}
 	parameters := TestStruct{}
 	osargs := []string{"--dummy="}
-	_, err := ParseArguments("test", osargs, &parameters, true)
+	_, err := klash.ParseArguments("test", osargs, &parameters, true)
 
 	if err == nil {
 		t.Error("Should produce an error")
@@ -145,7 +147,7 @@ func TestUnknown(t *testing.T) {
 	}
 	parameters := TestStruct{}
 	osargs := []string{"--derpy", "derp"}
-	_, err := ParseArguments("test", osargs, &parameters, true)
+	_, err := klash.ParseArguments("test", osargs, &parameters, true)
 
 	if err == nil {
 		t.Error("Should produce an error")
@@ -158,7 +160,7 @@ func TestMultiWord(t *testing.T) {
 	}
 	parameters := TestStruct{}
 	osargs := []string{"--dummy-arg", "derp"}
-	_, err := ParseArguments("test", osargs, &parameters, true)
+	_, err := klash.ParseArguments("test", osargs, &parameters, true)
 
 	if err != nil {
 		t.Error(err)
@@ -176,7 +178,7 @@ func TestMultiWord2(t *testing.T) {
 	}
 	parameters := TestStruct{}
 	osargs := []string{"--dummy-arg", "derp"}
-	_, err := ParseArguments("test", osargs, &parameters, true)
+	_, err := klash.ParseArguments("test", osargs, &parameters, true)
 
 	if err != nil {
 		t.Error(err)
@@ -194,7 +196,7 @@ func TestBool(t *testing.T) {
 	}
 	parameters := TestStruct{}
 	osargs := []string{"--version"}
-	_, err := ParseArguments("test", osargs, &parameters, true)
+	_, err := klash.ParseArguments("test", osargs, &parameters, true)
 
 	if err != nil {
 		t.Error(err)
@@ -213,7 +215,7 @@ func TestMultipleBool(t *testing.T) {
 	}
 	parameters := TestStruct{}
 	osargs := []string{"-v", "-d"}
-	_, err := ParseArguments("test", osargs, &parameters, true)
+	_, err := klash.ParseArguments("test", osargs, &parameters, true)
 
 	if err != nil {
 		t.Error(err)
@@ -232,7 +234,7 @@ func TestInt(t *testing.T) {
 	}
 	parameters := TestStruct{}
 	osargs := []string{"--temperature", "-10", "--age", "27"}
-	_, err := ParseArguments("test", osargs, &parameters, true)
+	_, err := klash.ParseArguments("test", osargs, &parameters, true)
 
 	if err != nil {
 		t.Error(err)
@@ -251,7 +253,7 @@ func TestFloat(t *testing.T) {
 	}
 	parameters := TestStruct{}
 	osargs := []string{"--longitude", "-72.7", "--lattitude", "27.4"}
-	_, err := ParseArguments("test", osargs, &parameters, true)
+	_, err := klash.ParseArguments("test", osargs, &parameters, true)
 
 	if err != nil {
 		t.Error(err)
@@ -275,7 +277,7 @@ func TestSlice(t *testing.T) {
 		osargs = append(osargs, "--grades", grade)
 	}
 
-	_, err := ParseArguments("test", osargs, &parameters, true)
+	_, err := klash.ParseArguments("test", osargs, &parameters, true)
 
 	if err != nil {
 		t.Error(err)
@@ -301,7 +303,7 @@ func TestUnknownType(t *testing.T) {
 	}
 	parameters := TestStruct{}
 	osargs := []string{"--duration", "derp"}
-	_, err := ParseArguments("test", osargs, &parameters, true)
+	_, err := klash.ParseArguments("test", osargs, &parameters, true)
 
 	if err == nil {
 		t.Error("Should produce an error")
@@ -315,7 +317,7 @@ func TestConvertible(t *testing.T) {
 
 	parameters := TestStruct{}
 	osargs := []string{"--start", "2014-07-31"}
-	_, err := ParseArguments("test", osargs, &parameters, true)
+	_, err := klash.ParseArguments("test", osargs, &parameters, true)
 
 	if err != nil {
 		t.Error(err)
@@ -336,7 +338,7 @@ func TestConvertibleError(t *testing.T) {
 
 	parameters := TestStruct{}
 	osargs := []string{"--start", "31/07/2014"}
-	_, err := ParseArguments("test", osargs, &parameters, true)
+	_, err := klash.ParseArguments("test", osargs, &parameters, true)
 
 	if err == nil {
 		t.Error("Should produce an error")

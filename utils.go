@@ -11,7 +11,7 @@ func DecomposeName(name string) string {
 
 	for idx, c := range name {
 		if idx > 0 && unicode.IsUpper(c) && idx != length-1 {
-			buf.WriteString("-")
+			buf.WriteRune('-')
 		}
 		buf.WriteRune(unicode.ToLower(c))
 	}
