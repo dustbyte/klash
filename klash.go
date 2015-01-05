@@ -13,7 +13,9 @@ func ParseArguments(name string, arguments []string, parameters interface{}, sto
 	}
 
 	params := NewParams()
-	params.Parse(&pvalue)
+	if err := params.Parse(&pvalue); err != nil {
+		return nil, err
+	}
 
 	parser := NewArgumentParser(name, params, arguments, stop)
 
