@@ -12,8 +12,7 @@ type Convertible interface {
 }
 
 type ArgumentParser struct {
-	Name    string
-	Params  Params
+	Params  *Params
 	Args    []string
 	OutArgs []string
 	Idx     int
@@ -21,9 +20,8 @@ type ArgumentParser struct {
 	Stopped bool
 }
 
-func NewArgumentParser(name string, params Params, args []string, stop bool) *ArgumentParser {
+func NewArgumentParser(params *Params, args []string, stop bool) *ArgumentParser {
 	return &ArgumentParser{
-		name,
 		params,
 		args,
 		make([]string, 0, len(args)),
@@ -50,7 +48,7 @@ func (ap *ArgumentParser) checkConvertible(stringval string,
 		ptrType = reflect.PtrTo(value.Type())
 
 		if !value.CanAddr() {
-			return fmt.Errorf("%s: error: %s is not addressable", ap.Name, value.Type()), false
+			return fmt.Errorf("%s is not addressable", value.Type()), false
 		}
 		ptr = value.Addr()
 	}
@@ -63,8 +61,7 @@ func (ap *ArgumentParser) checkConvertible(stringval string,
 
 	method := ptr.MethodByName("FromString")
 	if !method.IsValid() {
-		return fmt.Errorf("%s: error: conversion method not valid: %s",
-			ap.Name, value.Type()), false
+		return fmt.Errorf("conversion method not valid: %s", value.Type()), false
 	}
 
 	ierr := method.Call([]reflect.Value{reflect.ValueOf(stringval)})[0].Interface()
@@ -114,7 +111,7 @@ func (ap *ArgumentParser) extractVal(stringval string,
 			}
 			value.Set(reflect.ValueOf(float64(val)))
 		default:
-			return fmt.Errorf("%s: error: cannot handle type %s", ap.Name, value.Type())
+			return fmt.Errorf("cannot handle type %s", value.Type())
 		}
 	}
 	return nil
@@ -137,7 +134,7 @@ func (ap *ArgumentParser) explodeArg(arg string) (string, string, error) {
 	if idx >= 0 {
 		exploded := strings.Split(arg, "=")
 		if exploded[1] == "" {
-			return "", "", fmt.Errorf("%s: error: no value provided to %s", ap.Name, exploded[0])
+			return "", "", fmt.Errorf("no value provided to %s", exploded[0])
 		}
 		return exploded[0], exploded[1], nil
 	}
@@ -166,14 +163,18 @@ func (ap *ArgumentParser) ParseOne() error {
 
 	arg = strings.ToLower(arg)
 
-	if param, ok := ap.Params[arg]; ok {
+	if arg == "help" || arg == "h" {
+		return HelpError
+	}
+
+	if param, ok := ap.Params.Get(arg); ok {
 		if param.Value.Kind() == reflect.Bool {
 			ap.setBool(param)
 		} else {
 			if stringval == "" {
 				ap.Idx++
 				if ap.Idx >= len(ap.Args) {
-					return fmt.Errorf("%s: error: no value provided for %s", ap.Name, arg)
+					return fmt.Errorf("no value provided for %s", arg)
 				}
 				stringval = ap.Args[ap.Idx]
 			}
@@ -190,15 +191,24 @@ func (ap *ArgumentParser) ParseOne() error {
 		}
 	} else {
 		for _, rune := range arg {
-			param, ok := ap.Params[string(rune)]
+			param, ok := ap.Params.Get(string(rune))
 			if ok && param.Value.Kind() == reflect.Bool {
 				ap.setBool(param)
 			} else {
-				return fmt.Errorf("%s: error: unrecognized arguments: %s", ap.Name, arg)
+				return fmt.Errorf("unrecognized arguments: %s", arg)
 			}
 		}
 	}
 
 	ap.Idx++
+	return nil
+}
+
+func (ap *ArgumentParser) Parse() error {
+	for !ap.Terminated() {
+		if err := ap.ParseOne(); err != nil {
+			return err
+		}
+	}
 	return nil
 }

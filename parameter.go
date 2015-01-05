@@ -11,21 +11,22 @@ import (
 // The Value field is the reflection representation of the
 // value of the parameters structure field.
 type Parameter struct {
-	Names []string
+	Name  string
 	Value reflect.Value
 	Help  string
 }
 
-// The capacity of 2 seems to be a good guess for the number of aliases.
+// A capacity of 2 seems to be a good guess for the number of aliases.
 func NewParameter(name string, value reflect.Value) *Parameter {
 	parameter := Parameter{
-		Names: make([]string, 1, 2),
+		Name:  name,
 		Value: value,
 	}
-	parameter.Names[0] = name
 	return &parameter
 }
 
+// List through all Tag-related (i.e starting with Tag) method of the Parameter type
+// and execute them.
 func (p *Parameter) DiscoverProperties(tag reflect.StructTag) error {
 	if len(tag) > 0 {
 		paramtype := reflect.TypeOf((*Parameter)(nil))

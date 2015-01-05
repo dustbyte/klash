@@ -29,7 +29,7 @@ func TestHelpTag(t *testing.T) {
 		return
 	}
 
-	if parameter.Help == "" {
+	if parameter.Help != "Print version and exit" {
 		t.Error("Help message is supposed to be filled")
 	}
 }
