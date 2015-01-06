@@ -12,6 +12,7 @@ import (
 // value of the parameters structure field.
 type Parameter struct {
 	Name  string
+	Alias string
 	Value reflect.Value
 	Help  string
 }
@@ -55,5 +56,10 @@ func (p *Parameter) DiscoverProperties(tag reflect.StructTag) error {
 
 func (p *Parameter) TagHelp(tag string) error {
 	p.Help = tag
+	return nil
+}
+
+func (p *Parameter) TagAlias(tag string) error {
+	p.Alias = tag
 	return nil
 }

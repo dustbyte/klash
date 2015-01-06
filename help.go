@@ -15,13 +15,20 @@ func GenerateUsage(params *Params) string {
 
 	for _, parameter := range params.Listing {
 		var paramUsage string
+		shortName := DecomposeName(parameter.Alias, true)
+
+		if shortName == "" {
+			shortName = DecomposeName(parameter.Name, true)
+		}
+		shortName = Dashed(shortName)
 
 		if parameter.Value.Type().Kind() != reflect.Bool {
-			paramUsage = fmt.Sprintf("[-%s %s]",
-				DecomposeName(parameter.Name),
-				strings.ToUpper(parameter.Name))
+			paramUsage = fmt.Sprintf("[%s %s]",
+				shortName,
+				DecomposeName(parameter.Name, false),
+			)
 		} else {
-			paramUsage = fmt.Sprintf("[-%s]", DecomposeName(parameter.Name))
+			paramUsage = fmt.Sprintf("[%s]", shortName)
 		}
 
 		usages = append(usages, paramUsage)
@@ -45,17 +52,21 @@ func GenerateDetails(params *Params) string {
 
 		for _, parameter := range params.Listing {
 			var paramName string
-			name := DecomposeName(parameter.Name)
+
+			name := fmt.Sprintf("%s", Dashed(DecomposeName(parameter.Name, true)))
+			if parameter.Alias != "" {
+				name = fmt.Sprintf("%s, %s", Dashed(DecomposeName(parameter.Alias, true)), name)
+			}
 
 			switch parameter.Value.Type().Kind() {
 			case reflect.Bool:
-				paramName = fmt.Sprintf("-%s=%t", name, parameter.Value.Interface())
+				paramName = fmt.Sprintf("%s=%t", name, parameter.Value.Interface())
 			case reflect.Slice:
-				paramName = fmt.Sprintf("-%s=[]", name)
+				paramName = fmt.Sprintf("%s=[]", name)
 			case reflect.String:
-				paramName = fmt.Sprintf("-%s=\"%s\"", name, parameter.Value.Interface())
+				paramName = fmt.Sprintf("%s=\"%s\"", name, parameter.Value.Interface())
 			default:
-				paramName = fmt.Sprintf("-%s=%s", name, parameter.Value.Interface())
+				paramName = fmt.Sprintf("%s=%s", name, parameter.Value.Interface())
 			}
 
 			paramLength := len(paramName)

@@ -5,11 +5,7 @@ import (
 	"os"
 )
 
-func ParseArguments(name string,
-	arguments []string,
-	parameters interface{},
-	help string,
-	stop bool) ([]string, error) {
+func ParseArguments(arguments []string, parameters interface{}, stop bool) ([]string, error) {
 
 	params, err := NewParams(parameters)
 	if err != nil {

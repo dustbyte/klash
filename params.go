@@ -2,6 +2,7 @@ package klash
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 )
 
@@ -54,13 +55,31 @@ func (p *Params) Parse(pvalue *reflect.Value) error {
 			return err
 		}
 
-		p.Mapping[DecomposeName(parameter.Name)] = parameter
+		if err := p.Set(parameter.Name, parameter); err != nil {
+			return err
+		}
+
+		if parameter.Alias != "" {
+			if err := p.Set(parameter.Alias, parameter); err != nil {
+				return err
+			}
+		}
 		p.Listing = append(p.Listing, parameter)
 	}
 	return nil
 }
 
 func (p *Params) Get(key string) (*Parameter, bool) {
-	val, ok := p.Mapping[key]
+	val, ok := p.Mapping[DecomposeName(key, true)]
 	return val, ok
+}
+
+func (p *Params) Set(key string, value *Parameter) error {
+	key = DecomposeName(key, true)
+	_, ok := p.Mapping[key]
+	if ok {
+		return fmt.Errorf("klash: %s is already an argument or an alias", key)
+	}
+	p.Mapping[key] = value
+	return nil
 }
