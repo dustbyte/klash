@@ -1,32 +1,59 @@
 package klash
 
 import (
-	"errors"
+	"fmt"
 	"os"
-	"reflect"
 )
 
-func ParseArguments(arguments []string, params interface{}, stop bool) ([]string, error) {
-	pvalue := reflect.ValueOf(params)
-	if pvalue.Kind() != reflect.Ptr {
-		return nil, errors.New("klash: Pointer type expected")
-	}
+func ParseArguments(arguments []string, parameters interface{}, stop bool) ([]string, error) {
 
-	parser := NewParamParser()
-	if err := parser.Parse(&pvalue); err != nil {
+	params, err := NewParams(parameters)
+	if err != nil {
 		return nil, err
 	}
-	aparser := NewArgumentParser(parser, arguments, stop)
 
-	for !aparser.Terminated() {
-		if err := aparser.ParseOne(); err != nil {
-			return nil, err
-		}
+	parser := NewArgumentParser(params, arguments, stop)
+	err = parser.Parse()
+
+	if err != nil {
+		return nil, err
 	}
 
-	return aparser.OutArgs, nil
+	return parser.OutArgs, nil
 }
 
-func Parse(params interface{}) ([]string, error) {
-	return ParseArguments(os.Args[1:], params, true)
+func HammerArguments(name string,
+	arguments []string,
+	parameters interface{},
+	help string,
+	stop bool) []string {
+
+	params, err := NewParams(parameters)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(2)
+	}
+
+	parser := NewArgumentParser(params, arguments, stop)
+	err = parser.Parse()
+
+	if err != nil {
+		status := 0
+
+		fmt.Fprint(os.Stderr, GenerateHelp(name, help, params))
+
+		if err != HelpError {
+			status = 2
+			fmt.Fprintf(os.Stderr, "\n%s: error: %s\n", name, err)
+		}
+
+		os.Exit(status)
+	}
+
+	return parser.OutArgs
+
+}
+
+func Parse(parameters interface{}, help string) []string {
+	return HammerArguments(os.Args[0], os.Args[1:], parameters, help, true)
 }

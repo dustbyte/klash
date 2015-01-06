@@ -1,74 +1,85 @@
 package klash
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
-	"strings"
 )
 
-var allowedTypes map[reflect.Kind]bool = map[reflect.Kind]bool{
-	reflect.Bool:    true,
-	reflect.Int:     true,
-	reflect.Uint:    true,
-	reflect.Float32: true,
-	reflect.Float64: true,
-	reflect.String:  true,
-	reflect.Slice:   true,
+type Params struct {
+	Mapping map[string]*Parameter
+	Listing []*Parameter
 }
 
-type Parameter struct {
-	Names []string
-	Value reflect.Value
-}
-
-func NewParameter(name string, value reflect.Value) *Parameter {
-	parameter := Parameter{
-		make([]string, 1, 2),
-		value,
+// Params store the mapping of ParamName -> Parameter for the given structure.
+// Since multiple names can be affected to a single parameter, multiple
+// keys can be associated with a single parameter.
+func MakeParams(fieldCount int) *Params {
+	return &Params{
+		make(map[string]*Parameter),
+		make([]*Parameter, 0, fieldCount),
 	}
-	parameter.Names[0] = name
-	return &parameter
 }
 
-type ParamParser struct {
-	Params map[string]*Parameter
+func NewParams(parameters interface{}) (*Params, error) {
+	pvalue := reflect.ValueOf(parameters)
+	if pvalue.Kind() != reflect.Ptr || pvalue.Elem().Kind() != reflect.Struct {
+		return nil, errors.New("klash: Pointer to struct expected")
+	}
+	fieldCount := pvalue.Type().Elem().NumField()
+
+	params := MakeParams(fieldCount)
+	if err := params.Parse(&pvalue); err != nil {
+		return nil, err
+	}
+
+	return params, nil
 }
 
-func NewParamParser() *ParamParser {
-	return &ParamParser{make(map[string]*Parameter)}
-}
-
-func (p *ParamParser) Parse(pvalue *reflect.Value) error {
+// Parse discovers the given parameters structure and associates the structure's
+// field names with their values into the Params structure.
+func (p *Params) Parse(pvalue *reflect.Value) error {
 	vtype := pvalue.Type().Elem()
 
 	for idx := 0; idx < vtype.NumField(); idx++ {
 		field := vtype.Field(idx)
 
 		value := pvalue.Elem().Field(idx)
-		if _, ok := allowedTypes[value.Kind()]; !ok {
-			return fmt.Errorf("klash: Invalid type for parameter %s: %s",
-				field.Name,
-				value.Kind(),
-			)
-		}
 
 		if value.Kind() == reflect.Slice {
-			sliceType := value.Type().Elem()
-			_, ok := allowedTypes[sliceType.Kind()]
-			if !ok || sliceType.Kind() == reflect.Slice {
-				return fmt.Errorf("klash: Invalid slice type for parameter %s: %s",
-					field.Name,
-					sliceType.Kind(),
-				)
-			}
 			value.Set(reflect.MakeSlice(value.Type(), 0, 0))
 		}
 
 		parameter := NewParameter(field.Name, value)
-
-		for _, name := range parameter.Names {
-			p.Params[strings.ToLower(name)] = parameter
+		if err := parameter.DiscoverProperties(field.Tag); err != nil {
+			return err
 		}
+
+		if err := p.Set(parameter.Name, parameter); err != nil {
+			return err
+		}
+
+		if parameter.Alias != "" {
+			if err := p.Set(parameter.Alias, parameter); err != nil {
+				return err
+			}
+		}
+		p.Listing = append(p.Listing, parameter)
 	}
+	return nil
+}
+
+func (p *Params) Get(key string) (*Parameter, bool) {
+	val, ok := p.Mapping[DecomposeName(key, true)]
+	return val, ok
+}
+
+func (p *Params) Set(key string, value *Parameter) error {
+	key = DecomposeName(key, true)
+	_, ok := p.Mapping[key]
+	if ok {
+		return fmt.Errorf("klash: %s is already an argument or an alias", key)
+	}
+	p.Mapping[key] = value
 	return nil
 }
