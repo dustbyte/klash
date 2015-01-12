@@ -65,6 +65,10 @@ func GenerateDetails(params *Params) string {
 				paramName = fmt.Sprintf("%s=[]", name)
 			case reflect.String:
 				paramName = fmt.Sprintf("%s=\"%s\"", name, parameter.Value.Interface())
+			case reflect.Int, reflect.Uint:
+				paramName = fmt.Sprintf("%s=%d", name, parameter.Value.Interface())
+			case reflect.Float32, reflect.Float64:
+				paramName = fmt.Sprintf("%s=%.3f", name, parameter.Value.Interface())
 			default:
 				paramName = fmt.Sprintf("%s=%s", name, parameter.Value.Interface())
 			}
