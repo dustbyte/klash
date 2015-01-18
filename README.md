@@ -45,7 +45,7 @@ type Arguments struct {
 }
 
 func main() {
-	args := Arguments{Greeting: "Hi"} // Default value are set with Go syntactic constructions
+	args := Arguments{Greeting: "Hi"} // Default values are set with Go syntactic constructions
 	leftover := klash.Parse(&args, "Greet people")
 
 	if args.Version {
