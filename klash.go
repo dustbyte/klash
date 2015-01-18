@@ -40,7 +40,7 @@ func HammerArguments(name string,
 	if err != nil {
 		status := 0
 
-		fmt.Fprint(os.Stderr, GenerateHelp(name, help, params))
+		fmt.Fprint(os.Stderr, NewHelpFromParams(name, help, params).Generate())
 
 		if err != HelpError {
 			status = 2

@@ -9,11 +9,33 @@ import (
 
 var HelpError = errors.New("Help error")
 
-func GenerateUsage(params *Params) string {
-	usages := make([]string, 0, len(params.Listing)+2)
+type Help struct {
+	Params *Params
+	Name   string
+	Desc   string
+}
+
+func NewHelpFromParams(name, desc string, params *Params) *Help {
+	return &Help{
+		Params: params,
+		Name:   name,
+		Desc:   desc,
+	}
+}
+
+func NewHelp(name, desc string, rawParams interface{}) (*Help, error) {
+	params, err := NewParams(rawParams)
+	if err != nil {
+		return nil, err
+	}
+	return NewHelpFromParams(name, desc, params), nil
+}
+
+func (h *Help) Usage() string {
+	usages := make([]string, 0, len(h.Params.Listing)+2)
 	usages = append(usages, "[-h]")
 
-	for _, parameter := range params.Listing {
+	for _, parameter := range h.Params.Listing {
 		var paramUsage string
 		shortName := DecomposeName(parameter.Alias, true)
 
@@ -37,9 +59,9 @@ func GenerateUsage(params *Params) string {
 	return strings.Join(usages, " ")
 }
 
-func GenerateDetails(params *Params) string {
+func (h *Help) Details() string {
 	detail := ""
-	length := len(params.Listing)
+	length := len(h.Params.Listing)
 
 	if length > 0 {
 		helpArgs := "-h, --help=false"
@@ -50,7 +72,7 @@ func GenerateDetails(params *Params) string {
 		detail = fmt.Sprintf("argument details:\n")
 		details = append(details, [2]string{helpArgs, "Show this help"})
 
-		for _, parameter := range params.Listing {
+		for _, parameter := range h.Params.Listing {
 			var paramName string
 
 			name := fmt.Sprintf("%s", Dashed(DecomposeName(parameter.Name, true)))
@@ -95,18 +117,18 @@ func GenerateDetails(params *Params) string {
 	return detail
 }
 
-func GenerateHelp(name, desc string, params *Params) string {
-	usageLine := fmt.Sprintf("Usage: %s %s", name, GenerateUsage(params))
+func (h *Help) Generate() string {
+	usageLine := fmt.Sprintf("Usage: %s %s", h.Name, h.Usage())
 
 	usage := fmt.Sprintf("%s\n\n",
 		usageLine,
 	)
 
-	if desc != "" {
-		usage = fmt.Sprintf("%s%s\n\n", usage, desc)
+	if h.Desc != "" {
+		usage = fmt.Sprintf("%s%s\n\n", usage, h.Desc)
 	}
 
-	details := GenerateDetails(params)
+	details := h.Details()
 	if details != "" {
 		usage = fmt.Sprintf("%s%s\n", usage, details)
 	}
