@@ -23,7 +23,8 @@ func GenerateUsage(params *Params) string {
 		shortName = Dashed(shortName)
 
 		if parameter.Value.Type().Kind() != reflect.Bool {
-			paramUsage = fmt.Sprintf("[%s %s]",
+			paramUsage = fmt.Sprintf(
+				"[%s %s]",
 				shortName,
 				DecomposeName(parameter.Name, false),
 			)
@@ -65,6 +66,8 @@ func GenerateDetails(params *Params) string {
 				paramName = fmt.Sprintf("%s=[]", name)
 			case reflect.String:
 				paramName = fmt.Sprintf("%s=\"%s\"", name, parameter.Value.Interface())
+			case reflect.Int:
+				paramName = fmt.Sprintf("%s=%d", name, parameter.Value.Interface())
 			default:
 				paramName = fmt.Sprintf("%s=%s", name, parameter.Value.Interface())
 			}
